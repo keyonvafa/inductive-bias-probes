@@ -1,0 +1,46 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+
+[project]
+authors = [
+  {name = "Peter G. Chang", email = "peter0414@gmail.com"},
+  {name = "Keyon Vafa"}
+]
+dependencies = [
+  "anthropic==0.57.1",
+  "chex>=0.1.86",
+  "flax>=0.8.0",
+  "google-generativeai==0.8.5",
+  "jax>=0.4.21",
+  "jaxlib>=0.4.21",
+  "jax-tqdm>=0.1.0",
+  "matplotlib>=3.8.2",
+  "numpy==2.0",
+  "openai==1.93.2",
+  "optax>=0.1.7",
+  "optuna>=3.6.1",
+  "othello_world @ git+https://github.com/petergchang/othello_world.git",
+  "pandas>=2.1.3",
+  "pydantic",
+  "pysr",
+  "pytorch-lightning",
+  "seaborn>=0.13.0",
+  "torch==2.4.0",
+  "tqdm>=4.66.1",
+  "transformers",
+  "wandb"
+]
+description = "What Has a Foundation Model Found? Using Inductive Bias to Probe for World Models"
+dynamic = ["version"]
+name = "inductivebiasprobes"
+requires-python = ">=3.10.0"
+
+[project.optional-dependencies]
+ssm = [
+  "causal-conv1d",
+  "mamba-ssm"
+]
+
+[tool.setuptools_scm]
+version_file = "version.py"

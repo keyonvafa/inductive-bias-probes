@@ -1,0 +1,10 @@
+block_size: 999
+force_max: 0.005
+force_min: 2.0e-07
+input_dim: 2
+input_vocab_size: 7003
+mask_id: .inf
+num_data_points: 10000
+output_dim: 1
+output_vocab_size: null
+predict_type: force_magnitude
