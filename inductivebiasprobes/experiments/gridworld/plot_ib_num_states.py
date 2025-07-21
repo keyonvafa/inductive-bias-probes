@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -43,10 +45,7 @@ def main():
                     ib_results = json.load(f)
 
                 r_ib = ib_results["same_state_ib"]
-                # D-IB is not explicitly in the data, but the plot shows a score.
-                # "diff_state_loss" is a loss, so we convert it to a score.
-                # Assuming D-IB = 1 - diff_state_loss to match plot style.
-                d_ib = 1 - ib_results["diff_state_loss"]
+                d_ib = ib_results["diff_state_loss"]
 
                 data.append(
                     {
@@ -61,7 +60,9 @@ def main():
 
     df = pd.DataFrame(data)
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+    yticks = [0.4, 0.6, 0.8, 1.0]
 
     # Plot R-IB
     sns.lineplot(
@@ -77,6 +78,9 @@ def main():
     axes[0].set_xlabel("Number of states")
     axes[0].set_ylabel("R-IB")
     axes[0].legend(title="")
+    axes[0].set_xticks(num_states_list)
+    axes[0].set_ylim(0.35, 1.05)
+    axes[0].set_yticks(yticks)
 
     # Plot D-IB
     sns.lineplot(
@@ -92,10 +96,15 @@ def main():
     axes[1].set_xlabel("Number of states")
     axes[1].set_ylabel("D-IB")
     axes[1].legend(title="")
+    axes[1].set_xticks(num_states_list)
+    axes[1].set_ylim(0.35, 1.05)
+    axes[1].set_yticks(yticks)
 
-    # Improve layout and save the figure
+    # Save figure
     plt.tight_layout()
-    plt.savefig("ib_vs_num_states.png", dpi=300)
+    fig_dir = Path("figs")
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    plt.savefig(fig_dir / "ib_vs_num_states.png", dpi=300)
     plt.show()
 
 

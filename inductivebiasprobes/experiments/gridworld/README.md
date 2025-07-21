@@ -47,49 +47,49 @@ python generate_white_noise.py
 ### Fine-tune on white noise dataset (for Figure 5)
 
 ```
-python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type gpt
-python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type gpt
-python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type gpt
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type gpt
+python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type gpt --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type gpt --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type gpt --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type gpt --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type mamba
-python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type mamba
-python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type mamba
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba
+python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type mamba --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type mamba --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type mamba --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type mamba2
-python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type mamba2
-python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type mamba2
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba2
+python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type mamba2 --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type mamba2 --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type mamba2 --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba2 --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type rnn
-python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type rnn
-python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type rnn
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type rnn
+python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type rnn --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type rnn --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type rnn --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type rnn --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type lstm
-python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type lstm
-python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type lstm
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type lstm
+python train_model.py --config white_noise_config --pretrained next_token --num_states 2 --model_type lstm --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 3 --model_type lstm --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 4 --model_type lstm --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type lstm --max_iters 100
 ```
 
 ### Fine-tune on white noise dataset (for Table 2)
 
 ```
-python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type gpt
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type gpt
+python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type gpt --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type gpt --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type mamba
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba
+python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type rnn --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type rnn --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type mamba2
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba2
+python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type lstm --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type lstm --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type rnn
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type rnn
+python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type mamba --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba --max_iters 100
 
-python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type lstm
-python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type lstm
+python train_model.py --config white_noise_config --pretrained scratch --num_states 5 --model_type mamba2 --max_iters 100
+python train_model.py --config white_noise_config --pretrained next_token --num_states 5 --model_type mamba2 --max_iters 100
 ```
 
 ### Compute inductive bias (for Figure 5)
