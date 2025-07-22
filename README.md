@@ -118,3 +118,5 @@ python plot_llm_forces.py
 
 The code for the inductive bias probes for physics and the lattice and Othello experiments will be added soon. We're also working on sharing model checkpoints and the larger datasets. 
 
+# Other Experiments
+The code to reproduce results for the Lattice experiments can be found in `inductivebiasprobs/experiments/gridworld/`. Refer to the `README.md` for details.
