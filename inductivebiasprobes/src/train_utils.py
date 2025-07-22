@@ -381,7 +381,14 @@ def estimate_loss(
         val_losses.append(loss.cpu())
 
     # Concatenate all validation losses
-    out["val"] = torch.cat(val_losses).numpy()
+    if val_losses:
+        # If loss is a scalar, stack; otherwise, concatenate
+        if val_losses[0].dim() == 0:
+            out["val"] = torch.stack(val_losses).numpy()
+        else:
+            out["val"] = torch.cat(val_losses).numpy()
+    else:
+        out["val"] = np.array([])
     model.train()
     return out
 
