@@ -1,0 +1,8 @@
+block_size: 59
+input_dim: 1
+input_vocab_size: 61
+mask_id: 60
+num_data_points: 20000000
+output_dim: 1
+output_vocab_size: 61
+predict_type: next_token
