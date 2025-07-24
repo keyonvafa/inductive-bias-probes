@@ -1,4 +1,3 @@
-import argparse
 import logging
 import yaml
 import zipfile
@@ -13,11 +12,6 @@ from inductivebiasprobes.paths import OTHELLO_CONFIG_DIR, OTHELLO_DATA_DIR
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    return parser.parse_args()
 
 
 def get_word_to_id_mapping():
@@ -231,31 +225,39 @@ def edges_transformation(boards):
 
 
 def main():
-    args = parse_args()
-
     word_to_id, pad_id = get_word_to_id_mapping()
     seq_len = 60
 
     data_name = "synthetic-othello".replace("-", "_")
     data_dir = OTHELLO_DATA_DIR / data_name
     config_dir = OTHELLO_CONFIG_DIR / data_name
-    data_root = OTHELLO_DATA_DIR / "othello_synthetic"
-    if not data_root.exists():
-        zip_path_str = "othello_synthetic-20241111T015400Z-"
-        zip_path1 = OTHELLO_DATA_DIR / (zip_path_str + "001.zip")
-        zip_path2 = OTHELLO_DATA_DIR / (zip_path_str + "002.zip")
-        with zipfile.ZipFile(zip_path1, "r") as zip_ref:
-            zip_ref.extractall(OTHELLO_DATA_DIR)
-        with zipfile.ZipFile(zip_path2, "r") as zip_ref:
-            zip_ref.extractall(OTHELLO_DATA_DIR)
-    othello_synth = get_othello(ood_num=-1, data_root=data_root, wthor=True)
-    othello_synth_valid = othello_synth.val
-    dataset_synth = CharDataset(othello_synth)
-    dataset_synth_valid = CharDataset(othello_synth_valid)
 
-    train_data, valid_data, train_states, valid_states = process_championship_data(
-        dataset_synth, dataset_synth_valid, word_to_id, pad_id, seq_len, True
-    )
+    train_obs_file = data_dir / "obs_train.npy"
+    if train_obs_file.exists():
+        logger.info("Data files detected. Loading existing data.")
+        train_data = np.load(data_dir / "obs_train.npy")
+        valid_data = np.load(data_dir / "obs_val.npy")
+        train_states = np.load(data_dir / "state_train.npy")
+        valid_states = np.load(data_dir / "state_val.npy")
+    else:
+        logger.info("No data files found. Generating new data.")
+        data_root = OTHELLO_DATA_DIR / "othello_synthetic"
+        if not data_root.exists():
+            zip_path_str = "othello_synthetic-20241111T015400Z-"
+            zip_path1 = OTHELLO_DATA_DIR / (zip_path_str + "001.zip")
+            zip_path2 = OTHELLO_DATA_DIR / (zip_path_str + "002.zip")
+            with zipfile.ZipFile(zip_path1, "r") as zip_ref:
+                zip_ref.extractall(OTHELLO_DATA_DIR)
+            with zipfile.ZipFile(zip_path2, "r") as zip_ref:
+                zip_ref.extractall(OTHELLO_DATA_DIR)
+        othello_synth = get_othello(ood_num=-1, data_root=data_root, wthor=True)
+        othello_synth_valid = othello_synth.val
+        dataset_synth = CharDataset(othello_synth)
+        dataset_synth_valid = CharDataset(othello_synth_valid)
+
+        train_data, valid_data, train_states, valid_states = process_championship_data(
+            dataset_synth, dataset_synth_valid, word_to_id, pad_id, seq_len, True
+        )
 
     save_data_files(
         data_dir,
