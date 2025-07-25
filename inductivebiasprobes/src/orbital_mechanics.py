@@ -91,6 +91,7 @@ def build_exoplanet_distributions(df, max_sma: float = 32) -> dict:
     Args:
         df: DataFrame containing the exoplanet data.
         max_sma: Maximum semi-major axis to consider.
+        two_body_only: Whether to only consider two-body problems.
 
     Returns:
         A dictionary of distributions for the exoplanet parameters.
@@ -128,6 +129,36 @@ def build_exoplanet_distributions(df, max_sma: float = 32) -> dict:
     return distributions
 
 
+def build_two_body_distributions(max_sma: float = 32) -> dict:
+    """Build a dictionary of distributions for the two-body problem parameters.
+
+    Args:
+        max_sma: Maximum semi-major axis to consider.
+
+    Returns:
+        A dictionary of distributions for the two-body problem parameters.
+    """
+    # ----------- 1. Eccentricity ------------
+    ecc_distribution = stats.beta(0.867, 3.03)
+
+    # ----------- 2. Semi-major axis ------------
+    sma_distribution = stats.uniform(0.3, max_sma - 0.3)
+
+    # ----------- 3. Masses ------------
+    mass_distribution = stats.uniform(1e-4, 1e-2)
+
+    distributions = {
+        "ecc": ecc_distribution,
+        "sma": sma_distribution,
+        "planet_mass": mass_distribution,
+        "star_mass": mass_distribution,
+        "num_planets": stats.randint(1, 2),
+        "two_body": True,
+    }
+
+    return distributions
+
+
 def sample_exoplanets(
     exoplanet_distributions: dict, num_planets: int | None = None, seed: int = 0
 ) -> tuple[list[float_type], list[float_type], list[float_type], float_type]:
@@ -144,21 +175,35 @@ def sample_exoplanets(
         num_planets = (
             exoplanet_distributions["num_planets"].rvs(size=1, random_state=seed).item()
         )
-    mass_2 = exoplanet_distributions["star_mass"].rvs(size=1, random_state=seed).item()
-    mass_2 = np.clip(mass_2, 0.1, 5.0).item()
+        seed += 1
+    
+    if "two_body" in exoplanet_distributions:
+        masses = exoplanet_distributions["star_mass"].rvs(size=2, random_state=seed)
+        mass_1, mass_2 = np.min(masses), np.max(masses)
+        seed += 1
+        mass_1s = [mass_1]
+    else:
+        mass_2 = exoplanet_distributions["star_mass"].rvs(size=1, random_state=seed).item()
+        seed += 1
+        mass_2 = np.clip(mass_2, 0.1, 5.0).item()
+        mass_1s = []
+
     smas = []
     eccs = []
-    mass_1s = []
-    for _ in range(num_planets):
+    for i in range(num_planets):
         sma = exoplanet_distributions["sma"].rvs(size=1, random_state=seed).item()
+        seed += 1
         ecc = exoplanet_distributions["ecc"].rvs(size=1, random_state=seed).item()
-        mass_1 = (
-            exoplanet_distributions["planet_mass"].rvs(size=1, random_state=seed).item()
-        )
-        mass_1 = np.clip(mass_1, 1e-9, 1e-3).item()
+        seed += 1
+        if "two_body" not in exoplanet_distributions:
+            mass_1 = (
+                exoplanet_distributions["planet_mass"].rvs(size=1, random_state=seed).item()
+            )
+            seed += 1
+            mass_1 = np.clip(mass_1, 1e-9, 1e-3).item()
+            mass_1s.append(mass_1)
         smas.append(sma)
         eccs.append(ecc)
-        mass_1s.append(mass_1)
         seed += 1
 
     return eccs, smas, mass_1s, mass_2
@@ -454,19 +499,21 @@ def generate_trajectories(
     num_points_per_trajectory: int = 1_000,
     dt: float_type = 300,  # 5 minutes
     rng: int | Generator = 0,
+    fix_heavier: bool = True,
 ) -> tuple[
     list[TrajectoryObservation],
     list[TrajectoryState],
     list[TrajectoryFunctionsOfState],
     TrajectoryObservation,
 ]:
-    """Generate a trajectory with the heavier object fixed at some random coordinate.
+    """Generate a trajectory with the heavier object fixed at some random coordinate, or not if fix_heavier=False.
 
     Args:
         problem: MultipleTwoBodyProblem instance that contains the problem parameters.
         num_points_per_trajectory: Number of points to generate along the orbit.
         dt: Time step in seconds between each point.
         rng: Random number generator or seed.
+        fix_heavier: If True, fix the heavier object at a random coordinate. If False, do not fix (only for single planet).
 
     Returns:
         Tuple of lists of TrajectoryObservation, TrajectoryState, and TrajectoryFunctionsOfState instances.
@@ -481,6 +528,9 @@ def generate_trajectories(
     vel_2s = []
     eccs = []
     for i in range(num_planets):
+        assert (
+            problem.mass_1s[i] < problem.mass_2
+        ), f"Planet mass {problem.mass_1s[i]} must be smaller than star mass {problem.mass_2}"
         single_two_body_problem = TwoBodyProblem(
             mass_1=problem.mass_1s[i],
             mass_2=problem.mass_2,
@@ -499,14 +549,17 @@ def generate_trajectories(
         vel_2s.append(vel_2)
         eccs.append(e)
 
-    assert problem.mass_1s[i] < problem.mass_2
-
-    # Get shared location of sun.
-    random_heavier_orbit = rng.choice(orbit_2s, size=1, axis=0).squeeze()
-    heavier_coord = rng.choice(random_heavier_orbit, size=1, axis=0).squeeze()
-    heavier_orbit = np.repeat(
-        heavier_coord[np.newaxis, :], num_points_per_trajectory, axis=0
-    )
+    if fix_heavier:
+        # Get shared location of sun.
+        random_heavier_orbit = rng.choice(orbit_2s, size=1, axis=0).squeeze()
+        heavier_coord = rng.choice(random_heavier_orbit, size=1, axis=0).squeeze()
+        heavier_orbit = np.repeat(
+            heavier_coord[np.newaxis, :], num_points_per_trajectory, axis=0
+        )
+    else:
+        # Only valid for single planet
+        assert num_planets == 1, "fix_heavier=False is only supported for single-planet problems."
+        heavier_orbit = orbit_2s[0]
 
     trajectory_observations = []
     trajectory_states = []
@@ -521,9 +574,14 @@ def generate_trajectories(
         lighter_orbit = orbit_1
         mass_heavy, mass_light = problem.mass_2, problem.mass_1s[i]
         vel_heavy, vel_light = vel_2, vel_1
-        new_lighter_orbit = compute_orbit_in_new_frame(
-            orbit_2, lighter_orbit, heavier_coord
-        )
+
+        if fix_heavier:
+            new_lighter_orbit = compute_orbit_in_new_frame(
+                orbit_2, lighter_orbit, heavier_coord
+            )
+        else:
+            # No frame shift; use original orbits
+            new_lighter_orbit = lighter_orbit
 
         # Calculate relative velocity
         relative_velocity = vel_light - vel_heavy
@@ -545,7 +603,7 @@ def generate_trajectories(
         )
         trajectory_state = TrajectoryState(
             trajectory_light=new_lighter_orbit.tolist(),
-            trajectory_heavy=heavier_coord,
+            trajectory_heavy=heavier_orbit if fix_heavier else orbit_2,
             relative_velocity=relative_velocity.tolist(),
             m_light=mass_light,
             m_heavy=mass_heavy,
