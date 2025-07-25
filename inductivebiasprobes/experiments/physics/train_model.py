@@ -128,7 +128,7 @@ def train_and_save_model(
 
     # Setup wandb config
     config["wandb_project"] = f"physics-pretrain-{config['predict_type']}"
-    config["wandb_entity"] = "keyonvafa"
+    config["wandb_entity"] = "petergchang"
     # Override only if run_name is not provided
     if config["wandb_run_name"] == "default":
         config["wandb_run_name"] = run_name or "gpt"
