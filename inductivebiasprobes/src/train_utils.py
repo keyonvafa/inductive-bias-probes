@@ -277,13 +277,27 @@ def get_sequential_batch(
         # On training data, we mask out columns that aren't used for training.
         column_indices = np.load(config[f"{split}_indices_file"], mmap_mode="r")
         unmasked_column_indices = np.array([column_indices[i] for i in ix])
-        # Ensure y is of a type that supports advanced indexing (e.g., long)
-        y = y.long()
+        
+        # The column indices need to be long for indexing, but y should remain float.
         unmasked_column_indices = torch.from_numpy(unmasked_column_indices).long()
         y_masked = torch.full_like(y, fill_value=config["mask_id"])
-        y_masked[torch.arange(len(y)), unmasked_column_indices] = y[
-            torch.arange(len(y)), unmasked_column_indices
-        ]
+
+        if unmasked_column_indices.ndim == 1:
+            # Handle 1D indices (one index per trajectory)
+            row_indices = torch.arange(len(y))
+            y_masked[row_indices, unmasked_column_indices] = y[
+                row_indices, unmasked_column_indices
+            ]
+        elif unmasked_column_indices.ndim == 2:
+            # Handle 2D indices (multiple indices per trajectory)
+            row_indices = torch.arange(len(y)).unsqueeze(1)
+            y_masked[row_indices, unmasked_column_indices] = y[
+                row_indices, unmasked_column_indices
+            ]
+        else:
+            raise ValueError(
+                f"Unsupported indices shape: {unmasked_column_indices.shape}"
+            )
         y = y_masked
     if config["use_float_x"]:
         x = x.float()
