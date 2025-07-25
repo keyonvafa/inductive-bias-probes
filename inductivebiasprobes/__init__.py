@@ -2,6 +2,7 @@ from .src.orbital_mechanics import (
     TwoBodyProblem,
     generate_trajectories,
     build_exoplanet_distributions,
+    build_two_body_distributions,
     generate_solar_system,
     sample_exoplanets,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "TwoBodyProblem",
     "generate_trajectories",
     "build_exoplanet_distributions",
+    "build_two_body_distributions",
     "generate_solar_system",
     "sample_exoplanets",
 ]
