@@ -40,7 +40,6 @@ def load_config(args):
     return file_config
 
 
-
 def train_and_save_model(
     config,
     pretrained_ckpt_dir,
