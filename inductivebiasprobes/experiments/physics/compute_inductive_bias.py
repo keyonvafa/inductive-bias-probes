@@ -66,6 +66,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+    np.random.seed(args.seed)  # Set random seed for reproducibility
+
     all_extrapolations = []
     ext_dir = PHYSICS_EXT_DIR / "white_noise"
     ext_curr_dir = (
