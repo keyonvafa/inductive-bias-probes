@@ -73,7 +73,6 @@ def generate_mlp_oracle_predictions(
 
 def generate_state_dependent_noise(
     states_train_std,
-    states_val_std,
     random_seed,
     num_projection_trials=10,
 ):
@@ -93,7 +92,7 @@ def generate_state_dependent_noise(
     local_random_state = np.random.RandomState(random_seed)
 
     train_dataset_size, seq_len, state_dim = states_train_std.shape
-    val_dataset_size, _, _ = states_val_std.shape
+    val_dataset_size = train_dataset_size
 
     best_projection_matrix = None
     best_spearman_corr = -float("inf")
@@ -157,7 +156,7 @@ def generate_state_dependent_noise(
 
     # Use the best projection matrix for the final noise generation
     noise_train = states_train_std @ best_projection_matrix
-    noise_val = states_val_std @ best_projection_matrix
+    noise_val = noise_train  # Use the same noise for val set
 
     # --- Sanity Check with the chosen projection (optional, mostly for logging) ---
     # This part is similar to the loop's eval but on potentially different subset or for final verification
@@ -223,9 +222,7 @@ def main():
 
     # Load the pre-generated physics data
     train_obs = np.load(PHYSICS_DATA_DIR / "obs_two_body_train.npy")
-    val_obs = np.load(PHYSICS_DATA_DIR / "obs_two_body_val.npy")
     train_states = np.load(PHYSICS_DATA_DIR / "state_two_body_train.npy")
-    val_states = np.load(PHYSICS_DATA_DIR / "state_two_body_val.npy")
 
     # Get ntp_config
     ntp_config = yaml.load(
@@ -241,11 +238,6 @@ def main():
     )
     noise_data_dir.mkdir(parents=True, exist_ok=True)
 
-    # Fixed across datasets
-    val_indices = random_state.choice(
-        len(val_states), size=args.white_noise_dataset_size, replace=False
-    )
-
     # Get mean and std of train states
     train_mean = train_states.mean(axis=(0, 1), keepdims=True)
     train_std = train_states.std(axis=(0, 1), keepdims=True)
@@ -259,18 +251,16 @@ def main():
 
         # Get dataset observations and states
         train_dataset_obs = train_obs[train_indices]
-        val_dataset_obs = val_obs[val_indices]
         train_dataset_states = train_states[train_indices]
-        val_dataset_states = val_states[val_indices]
+        val_dataset_obs = train_dataset_obs
 
         # Standardize
         train_states_standardized = (train_dataset_states - train_mean) / train_std
-        val_states_standardized = (val_dataset_states - train_mean) / train_std
+        val_states_standardized = train_states_standardized  # Use the same states for val set
 
         train_noise, train_noise_indices, val_noise, val_noise_indices = (
             generate_state_dependent_noise(
                 train_states_standardized,
-                val_states_standardized,
                 args.seed
                 + dataset_idx
                 * 100,  # Different seed for each dataset noise generation process
