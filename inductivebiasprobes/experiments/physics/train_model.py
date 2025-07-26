@@ -25,6 +25,8 @@ def parse_physics_args():
     """Parse physics-specific command line arguments."""
     parser = argparse.ArgumentParser(description="Train a physics model")
     parser = add_common_args(parser)
+    parser.add_argument("--white_noise_dataset_idx_lower", type=int, default=None)
+    parser.add_argument("--white_noise_dataset_idx_upper", type=int, default=None)
     return parser.parse_args()
 
 
@@ -211,7 +213,11 @@ def main():
         )
 
     if config["predict_type"] == "white_noise":
-        for dataset_idx in range(config["num_white_noise_datasets"]):
+        if config["white_noise_dataset_idx_lower"] is None or config["white_noise_dataset_idx_upper"] is None:
+            idx_range = range(config["num_white_noise_datasets"])
+        else:
+            idx_range = range(config["white_noise_dataset_idx_lower"], config["white_noise_dataset_idx_upper"])
+        for dataset_idx in idx_range:
             logger.info(f"[Training on white noise dataset {dataset_idx}]")
 
             # Build checkpoint path
