@@ -687,17 +687,17 @@ def main():
         exoplanet_distributions = build_two_body_distributions(max_sma=SMA_MAX)
     for n_traj, label in zip(
         (
-            # args.num_train_trajectories,
-            # args.num_val_trajectories,
-            # args.num_test_trajectories,
+            args.num_train_trajectories,
+            args.num_val_trajectories,
+            args.num_test_trajectories,
             args.total_force_magnitudes,
             300, # for force val/test
             300,
         ),
         (
-            # "train",
-            # "val",
-            # "test",
+            "train",
+            "val",
+            "test",
             "two_body_train",
             "two_body_val",
             "two_body_test",
