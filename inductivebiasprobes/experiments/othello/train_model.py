@@ -15,6 +15,7 @@ from inductivebiasprobes.paths import (
 from inductivebiasprobes.src.train_utils import (
     add_common_args,
     generate_and_save_extrapolations,
+    get_batch,
     init_model,
     setup_training_environment,
     train,
@@ -57,7 +58,7 @@ def load_config(args):
     return file_config
 
 
-def evaluate_board_reconstruction(model, val_loader, config, iter_num):
+def evaluate_board_reconstruction(model, config, iter_num):
     """Evaluate board reconstruction metrics."""
     # Store original mode
     was_training = model.training
@@ -66,19 +67,19 @@ def evaluate_board_reconstruction(model, val_loader, config, iter_num):
     all_states = []
 
     with torch.no_grad():
-        for batch in val_loader:
-            x, states = batch
-            x = x.to(config["device"])
-            states = states.to(config["device"])
+        val_eval_iters = config.get("val_eval_iters", config["eval_iters"])
+        for k in range(val_eval_iters):
+            X, Y = get_batch("val", config)
 
             # Get model predictions
-            state_preds = model(x)
+            with torch.no_grad():
+                state_preds = model(X)
             state_preds = state_preds.view(-1, model.config.output_vocab_size)
             top_preds = torch.argmax(state_preds, dim=-1)
-            top_preds = top_preds.view(states.shape)
+            top_preds = top_preds.view(Y.shape)
 
             all_preds.append(top_preds.cpu().numpy())
-            all_states.append(states.cpu().numpy())
+            all_states.append(Y.cpu().numpy())
 
     # Concatenate and combine first two dimensions
     all_preds = np.concatenate(all_preds, axis=0)
