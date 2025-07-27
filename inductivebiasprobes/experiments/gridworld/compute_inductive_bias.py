@@ -28,7 +28,7 @@ def parse_args():
         "--pretrained",
         type=str,
         default="scratch",
-        choices=["scratch", "next_token", "state"],
+        choices=["scratch", "next_token"],
     )
     parser.add_argument(
         "--white_noise_dataset_size",
