@@ -21,7 +21,8 @@ def generate_ib_plot_and_mae(
     for both linear and MLP oracles, following the plotting style in the provided code.
     Also computes and saves MAE.
     """
-    sns.set("paper")
+    sns.set_theme("paper")
+    plt.rcParams['font.family'] = 'DejaVu Sans'
 
     # Only using next_token for now, but can be extended
     pt_type = "next_token"
@@ -55,12 +56,12 @@ def generate_ib_plot_and_mae(
     gpt_mlp = np.array(mlp["extrap_vals"])
 
     # Plotting
-    fig = plt.figure(figsize=(9, 3))
+    fig = plt.figure(figsize=(10.8, 3.6))
     ax1 = fig.add_subplot(1, 2, 1)
     ax2 = fig.add_subplot(1, 2, 2)
 
     # Linear oracle
-    ax1.scatter(bins_linreg, gpt_linreg, label='GPT inductive bias')
+    ax1.scatter(gpt_linreg, bins_linreg)
     ax1.plot(
         [min(bins_linreg), max(bins_linreg)],
         [min(bins_linreg), max(bins_linreg)],
@@ -68,13 +69,13 @@ def generate_ib_plot_and_mae(
         linestyle='--',
         color='red'
     )
-    ax1.set_xlabel('Oracle inductive bias', fontsize=14)
-    ax1.set_ylabel('Transformer inductive bias', fontsize=14)
+    ax1.set_xlabel('Transformer inductive bias', fontsize=14)
+    ax1.set_ylabel('Oracle inductive bias', fontsize=14)
     ax1.set_title('Linear oracle', fontsize=14)
     ax1.legend(fontsize=14)
 
     # MLP oracle
-    ax2.scatter(bins_mlp, gpt_mlp, label='GPT inductive bias')
+    ax2.scatter(gpt_mlp, bins_mlp)
     ax2.plot(
         [min(bins_mlp), max(bins_mlp)],
         [min(bins_mlp), max(bins_mlp)],
@@ -82,8 +83,8 @@ def generate_ib_plot_and_mae(
         linestyle='--',
         color='red'
     )
-    ax2.set_xlabel('Oracle inductive bias', fontsize=14)
-    ax2.set_ylabel('Transformer inductive bias', fontsize=14)
+    ax2.set_xlabel('Transformer inductive bias', fontsize=14)
+    ax2.set_ylabel('Oracle inductive bias', fontsize=14)
     ax2.set_title('MLP oracle', fontsize=14)
     ax2.legend(fontsize=14)
 
