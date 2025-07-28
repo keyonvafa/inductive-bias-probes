@@ -111,44 +111,32 @@ def main():
     logger.info("-" * len(header))
 
     # Calculate and print correlations
-    correlations = ["IBSS", "IBLossRatio", "IBRatio"]
     metrics = ["NLL", "ACC"]
-    for corr_type in correlations:
-        for metric in metrics:
-            row = f"{corr_type}-{metric}".ljust(30)
-            for task in TASKS:
-                # Collect all values across models and transfer types
-                ib_ss_values = []
-                loss_ds_values = []
-                val_acc_values = []
-                val_loss_values = []
+    for metric in metrics:
+        row = f"IBRatio-{metric}".ljust(30)
+        for task in TASKS:
+            # Collect all values across models and transfer types
+            ib_ss_values = []
+            loss_ds_values = []
+            val_acc_values = []
+            val_loss_values = []
 
-                for model in MODEL_TYPES:
-                    for transfer in TRANSFER_TYPES:
-                        task_data = data[task][model][transfer]
-                        ib_ss_values.append(task_data["ib_ss"])
-                        loss_ds_values.append(task_data["loss_ds"])
-                        val_acc_values.append(np.mean(task_data["val_accuracy"]))
-                        val_loss_values.append(np.mean(task_data["val_loss"]))
+            for model in MODEL_TYPES:
+                for transfer in TRANSFER_TYPES:
+                    task_data = data[task][model][transfer]
+                    ib_ss_values.append(task_data["ib_ss"])
+                    loss_ds_values.append(task_data["loss_ds"])
+                    val_acc_values.append(np.mean(task_data["val_accuracy"]))
+                    val_loss_values.append(np.mean(task_data["val_loss"]))
 
-                target_values = val_acc_values if metric == "ACC" else val_loss_values
-
-                if corr_type == "IBSS":
-                    corr = np.corrcoef(ib_ss_values, target_values)[0, 1]
-                elif corr_type == "IBLossRatio":
-                    ib_ratio = [
-                        (1 - ss) / ds for ss, ds in zip(ib_ss_values, loss_ds_values)
-                    ]
-                    corr = np.corrcoef(ib_ratio, target_values)[0, 1]
-                elif corr_type == "IBRatio":
-                    ib_ratio = [
-                        ss / (1 - ds) for ss, ds in zip(ib_ss_values, loss_ds_values)
-                    ]
-                    corr = np.corrcoef(ib_ratio, target_values)[0, 1]
-
-                cell = f"{corr:.3f}".ljust(35)
-                row += cell
-            logger.info(row)
+            target_values = val_acc_values if metric == "ACC" else val_loss_values
+            ib_ratio = [
+                ss / (1 - ds) for ss, ds in zip(ib_ss_values, loss_ds_values)
+            ]
+            corr = np.corrcoef(ib_ratio, target_values)[0, 1]
+            cell = f"{corr:.3f}".ljust(35)
+            row += cell
+        logger.info(row)
 
 
 if __name__ == "__main__":

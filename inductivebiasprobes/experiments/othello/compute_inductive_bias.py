@@ -381,6 +381,13 @@ def main():
         ext_test, states, pseudo_states
     )
     logger.info(f"Inductive Bias Results:")
+    logger.info(f"Model type: {args.model_type}")
+    logger.info(f"Pretrained: {args.pretrained}")
+    logger.info(f"White noise dataset size: {args.white_noise_dataset_size}")
+    logger.info(f"Number of white noise datasets: {args.num_white_noise_datasets}")
+    logger.info(f"Max iters: {args.max_iters}")
+    logger.info(f"Seed: {args.seed}")
+    logger.info(f"Number of examples: {args.num_examples}")
     logger.info(
         f"Average IB for same state pairs: {same_state_value:.3f} "
         f"± {same_state_stderr:.3f}"
