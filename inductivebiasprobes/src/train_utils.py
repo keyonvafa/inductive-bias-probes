@@ -238,7 +238,7 @@ def get_sequential_batch(
             # NOTE: This is a little dangerous, but it lets us use the same
             # config across the same dataset but different number of 
             # force vector training examples.
-            num_data_points = config["num_data_points"]
+            num_data_points = min(len(data), config["num_data_points"])
         else:
             num_data_points = len(data)
         if num_data_points < config["batch_size"]:  
@@ -623,6 +623,19 @@ def train(
         lr = get_lr(iter_num, config)
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr
+
+        if (
+            callback_fn is not None
+            and callback_interval is not None
+            and callback_dir is not None
+            and master_process
+            and iter_num % callback_interval == 0
+        ):
+            curr_result = callback_fn(model, config, iter_num)
+            if callback_results is None:
+                callback_results = {key: [] for key in curr_result.keys()}
+            for key, value in curr_result.items():
+                callback_results[key].append(value)
 
         if (iter_num + 1) % config["eval_interval"] == 0 and master_process:
             losses = estimate_loss(

@@ -6,6 +6,7 @@ from .src.orbital_mechanics import (
     sample_exoplanets,
 )
 from .src.model import Model, ModelConfig
+from .src.othello import ReversibleOthelloBoardState
 
 __all__ = [
     "Model",
