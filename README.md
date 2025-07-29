@@ -1,6 +1,6 @@
 # Inductive Bias Probes
 
-Source code for the paper ["Whas Has a Foundation Model Found? Using Inductive Bias to Probe for World Models"](https://arxiv.org/abs/2507.06952) by Keyon Vafa, Peter G Chang, Ashesh Rambachan, and Sendhil Mullainathan. 
+Source code for the paper ["What Has a Foundation Model Found? Using Inductive Bias to Probe for World Models"](https://arxiv.org/abs/2507.06952) by Keyon Vafa, Peter G Chang, Ashesh Rambachan, and Sendhil Mullainathan. 
 
 If you find this repository useful for your research, please consider citing our work:
 
@@ -119,4 +119,4 @@ python plot_llm_forces.py
 The code for the inductive bias probes for physics and the lattice and Othello experiments will be added soon. We're also working on sharing model checkpoints and the larger datasets. 
 
 # Other Experiments
-The code to reproduce results for the Lattice experiments can be found in `inductivebiasprobs/experiments/gridworld/`. Refer to the `README.md` for details.
+The code to reproduce results for the Lattice and Othello experiments can be found in `inductivebiasprobs/experiments/gridworld/` and `inductivebiasprobs/experiments/othello/`, respectively. Refer to the `README.md` file in each directory for details.
