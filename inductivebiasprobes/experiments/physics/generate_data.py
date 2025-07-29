@@ -281,6 +281,7 @@ def _generate_single_trajectory(task):
         force_vector_mask_id,
         skip_states,
     ) = task
+    num_bodies = len(eccs) + 1
 
     # Generate a random two-body problem
     while True:
@@ -351,7 +352,7 @@ def _generate_single_trajectory(task):
         full_state = None
         force_vectors = None
         force_magnitudes = None
-    return (traj_raw, traj, full_state, state, force_vectors, force_magnitudes)
+    return (traj_raw, traj, full_state, state, force_vectors, force_magnitudes, num_bodies)
 
 
 def _sample_exoplanet_for_queue(
@@ -421,6 +422,7 @@ def generate_data_parallel(
     force_mag_dim = 1
 
     obs_shape = (n_traj, num_points_per_trajectory, obs_dim)
+    num_bodies_shape = (n_traj,)
     # Pretraining doesn't need states. 
     if not skip_states:
         state_shape = (n_traj, num_points_per_trajectory, state_dim)
@@ -439,6 +441,13 @@ def generate_data_parallel(
         dtype=dtype,
         shape=obs_shape,
     )
+    num_bodies_mm = open_memmap(
+        out_dir / f"num_bodies_{label}.npy",
+        mode="w+",
+        dtype=np.uint8,
+        shape=num_bodies_shape,
+    )
+
     if not skip_states:
         state_mm = open_memmap(
             out_dir / f"state_{label}.npy",
@@ -508,10 +517,11 @@ def generate_data_parallel(
     # -------- 4. Worker pool + streamed writes ------------
     if debug:
         for idx, task in enumerate(tqdm.tqdm(tasks, desc=f"[{label}] Debug mode")):
-            traj_raw, traj, full_state, state, force_vectors, force_magnitudes = (
+            traj_raw, traj, full_state, state, force_vectors, force_magnitudes, num_bodies = (
                 _generate_single_trajectory(task)
             )
             obs_mm[idx] = traj.astype(dtype, copy=False)
+            num_bodies_mm[idx] = num_bodies
             if not skip_states:
                 state_mm[idx] = state.astype(np.float32, copy=False)
                 full_state_mm[idx] = full_state.astype(np.float32, copy=False)
@@ -526,6 +536,7 @@ def generate_data_parallel(
                 state,
                 force_vectors,
                 force_magnitudes,
+                num_bodies,
             ) in enumerate(
                 tqdm.tqdm(
                     pool.imap(_generate_single_trajectory, tasks),
@@ -535,6 +546,7 @@ def generate_data_parallel(
             ):
                 #  write the current trajectory directly to disk
                 obs_mm[idx] = traj.astype(dtype, copy=False)
+                num_bodies_mm[idx] = num_bodies
                 if not skip_states:
                     state_mm[idx] = state.astype(np.float32, copy=False)
                     full_state_mm[idx] = full_state.astype(np.float32, copy=False)
@@ -544,6 +556,8 @@ def generate_data_parallel(
                     )
     obs_mm.flush()
     del obs_mm
+    num_bodies_mm.flush()
+    del num_bodies_mm
     if not skip_states:
         state_mm.flush()
         del state_mm
