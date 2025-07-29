@@ -13,6 +13,7 @@ import tqdm
 
 from inductivebiasprobes import (
     build_exoplanet_distributions,
+    build_two_body_distributions,
     generate_solar_system,
     generate_trajectories,
     sample_exoplanets,
@@ -138,6 +139,11 @@ def parse_args():
         help="Number of parallel workers to use in multiprocessing pool",
     )
     parser.add_argument(
+        "--two_body_only",
+        action="store_true",
+        help="Only generate two-body problems",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Run in debug mode without parallel workers",
@@ -214,14 +220,16 @@ def process_multiplanet_states(
         :, np.newaxis
     ]
     sun_mass = np.tile(state_list[0].m_heavy, (num_points, 1))
+    relative_masses = planet_masses / sun_mass
 
     # Add 0s as first timestep to account for dt token
     relative_position = np.concatenate([np.zeros((1, 2)), relative_position], axis=0)[:num_points, :]
     relative_velocity = np.concatenate([np.zeros((1, 2)), relative_velocity], axis=0)[:num_points, :]
+    relative_masses = np.concatenate([np.zeros((1, 1)), relative_masses], axis=0)[:num_points, :]
     planet_masses = np.concatenate([np.zeros((1, 1)), planet_masses], axis=0)[:num_points, :]
     sun_mass = np.concatenate([np.zeros((1, 1)), sun_mass], axis=0)[:num_points, :]
 
-    return relative_position, relative_velocity, planet_masses, sun_mass
+    return relative_position, relative_velocity, relative_masses, planet_masses, sun_mass
 
 
 def process_multiplanet_fn_of_state(fn_of_state_list, num_points, force_magnitude_mask_id, force_vector_mask_id):
@@ -273,6 +281,7 @@ def _generate_single_trajectory(task):
         force_vector_mask_id,
         skip_states,
     ) = task
+    num_bodies = len(eccs) + 1
 
     # Generate a random two-body problem
     while True:
@@ -296,6 +305,7 @@ def _generate_single_trajectory(task):
                     num_points // 2,
                     dt,
                     rng=seed + 10,  # or some offset
+                    fix_heavier=len(mass_1s) > 1,
                 )
             )
             break
@@ -318,7 +328,7 @@ def _generate_single_trajectory(task):
 
     # States
     if not skip_states:
-        relative_position, relative_velocity, planet_masses, sun_mass = (
+        relative_position, relative_velocity, relative_masses, planet_masses, sun_mass = (
             process_multiplanet_states(
                 state_list,
                 heavier_obs,
@@ -329,15 +339,20 @@ def _generate_single_trajectory(task):
             [relative_position, relative_velocity, planet_masses, sun_mass],
             axis=1,
         )
+        state = np.concatenate(
+            [relative_position, relative_velocity, relative_masses],
+            axis=1,
+        )
         # Functions of state
         force_vectors, force_magnitudes = process_multiplanet_fn_of_state(
             fn_of_state_list, num_points, force_magnitude_mask_id, force_vector_mask_id
         )
     else:
+        state = None
         full_state = None
         force_vectors = None
         force_magnitudes = None
-    return (traj_raw, traj, full_state, force_vectors, force_magnitudes)
+    return (traj_raw, traj, full_state, state, force_vectors, force_magnitudes, num_bodies)
 
 
 def _sample_exoplanet_for_queue(
@@ -401,14 +416,17 @@ def generate_data_parallel(
     # -------- 1. Determine final shapes up front ----------
     n_traj = num_trajectories
     obs_dim = 2  #  (x, y)
-    state_dim = 6  # 2*pos + 2*vel + mass + sun_mass
+    state_dim = 5  # 2*pos + 2*vel + relative_mass
+    full_state_dim = 6  # 2*pos + 2*vel + m1 + m2
     force_vec_dim = 2
     force_mag_dim = 1
 
     obs_shape = (n_traj, num_points_per_trajectory, obs_dim)
+    num_bodies_shape = (n_traj,)
     # Pretraining doesn't need states. 
     if not skip_states:
         state_shape = (n_traj, num_points_per_trajectory, state_dim)
+        full_state_shape = (n_traj, num_points_per_trajectory, full_state_dim)
         force_vector_shape = (n_traj, num_points_per_trajectory, force_vec_dim)
         force_magnitude_shape = (n_traj, num_points_per_trajectory, force_mag_dim)
         force_magnitude_dtype = np.float32
@@ -423,12 +441,25 @@ def generate_data_parallel(
         dtype=dtype,
         shape=obs_shape,
     )
+    num_bodies_mm = open_memmap(
+        out_dir / f"num_bodies_{label}.npy",
+        mode="w+",
+        dtype=np.uint8,
+        shape=num_bodies_shape,
+    )
+
     if not skip_states:
         state_mm = open_memmap(
             out_dir / f"state_{label}.npy",
             mode="w+",
             dtype=np.float32,
             shape=state_shape,
+        )
+        full_state_mm = open_memmap(
+            out_dir / f"full_state_{label}.npy",
+            mode="w+",
+            dtype=np.float32,
+            shape=full_state_shape,
         )
         force_vector_mm = open_memmap(
             out_dir / f"force_vector_{label}.npy",
@@ -486,12 +517,14 @@ def generate_data_parallel(
     # -------- 4. Worker pool + streamed writes ------------
     if debug:
         for idx, task in enumerate(tqdm.tqdm(tasks, desc=f"[{label}] Debug mode")):
-            traj_raw, traj, full_state, force_vectors, force_magnitudes = (
+            traj_raw, traj, full_state, state, force_vectors, force_magnitudes, num_bodies = (
                 _generate_single_trajectory(task)
             )
             obs_mm[idx] = traj.astype(dtype, copy=False)
+            num_bodies_mm[idx] = num_bodies
             if not skip_states:
-                state_mm[idx] = full_state.astype(np.float32, copy=False)
+                state_mm[idx] = state.astype(np.float32, copy=False)
+                full_state_mm[idx] = full_state.astype(np.float32, copy=False)
                 force_vector_mm[idx] = force_vectors.astype(np.float32, copy=False)
                 force_magnitude_mm[idx] = force_magnitudes.astype(force_magnitude_dtype, copy=False)
     else:
@@ -500,8 +533,10 @@ def generate_data_parallel(
                 traj_raw,
                 traj,
                 full_state,
+                state,
                 force_vectors,
                 force_magnitudes,
+                num_bodies,
             ) in enumerate(
                 tqdm.tqdm(
                     pool.imap(_generate_single_trajectory, tasks),
@@ -511,17 +546,23 @@ def generate_data_parallel(
             ):
                 #  write the current trajectory directly to disk
                 obs_mm[idx] = traj.astype(dtype, copy=False)
+                num_bodies_mm[idx] = num_bodies
                 if not skip_states:
-                    state_mm[idx] = full_state.astype(np.float32, copy=False)
+                    state_mm[idx] = state.astype(np.float32, copy=False)
+                    full_state_mm[idx] = full_state.astype(np.float32, copy=False)
                     force_vector_mm[idx] = force_vectors.astype(np.float32, copy=False)
                     force_magnitude_mm[idx] = force_magnitudes.astype(
                         force_magnitude_dtype, copy=False
                     )
     obs_mm.flush()
     del obs_mm
+    num_bodies_mm.flush()
+    del num_bodies_mm
     if not skip_states:
         state_mm.flush()
         del state_mm
+        full_state_mm.flush()
+        del full_state_mm
         force_vector_mm.flush()
         del force_vector_mm
         force_magnitude_mm.flush()
@@ -580,6 +621,7 @@ def main():
     num_planets = len(SOLAR_SYSTEM_MASSES)
     solar_system_two_body_obs = []
     solar_system_two_body_state = []
+    solar_system_two_body_full_state = []
     solar_system_two_body_force_vectors = []
     solar_system_two_body_force_magnitudes = []
     traj_raws = []
@@ -598,6 +640,7 @@ def main():
                 args.num_points_per_trajectory,
                 dt=args.dts[1], # Do the longer dt so it covers the full orbit. 
                 rng=0,
+                fix_heavier=False,
             )
         )
         traj_raw, traj = process_multiplanet_trajectory(
@@ -607,7 +650,7 @@ def main():
             args.num_bins,
             dt_token=dt_to_token[1], 
         )
-        relative_position, relative_velocity, planet_masses, sun_mass = (
+        relative_position, relative_velocity, relative_masses, planet_masses, sun_mass = (
             process_multiplanet_states(
                 state_list,
                 heavier_obs,
@@ -618,13 +661,18 @@ def main():
             [relative_position, relative_velocity, planet_masses, sun_mass],
             axis=1,
         )
+        state = np.concatenate(
+            [relative_position, relative_velocity, relative_masses],
+            axis=1,
+        )
         force_vectors, force_magnitudes = process_multiplanet_fn_of_state(
             fn_of_state_list, args.num_points_per_trajectory,
             force_magnitude_mask_id, force_vector_mask_id,
         )
         traj_raws.append(traj_raw)
         solar_system_two_body_obs.append(traj)
-        solar_system_two_body_state.append(full_state)
+        solar_system_two_body_state.append(state)
+        solar_system_two_body_full_state.append(full_state)
         solar_system_two_body_force_vectors.append(force_vectors)
         solar_system_two_body_force_magnitudes.append(force_magnitudes)
     traj_raws = np.stack(traj_raws, axis=0)
@@ -636,6 +684,7 @@ def main():
     )
     solar_system_two_body_obs = np.stack(solar_system_two_body_obs, axis=0)
     solar_system_two_body_state = np.stack(solar_system_two_body_state, axis=0)
+    solar_system_two_body_full_state = np.stack(solar_system_two_body_full_state, axis=0)
     solar_system_two_body_force_vectors = np.stack(solar_system_two_body_force_vectors, axis=0)
     solar_system_two_body_force_magnitudes = np.stack(solar_system_two_body_force_magnitudes, axis=0)
     np.save(
@@ -644,6 +693,10 @@ def main():
     np.save(
         PHYSICS_DATA_DIR / "state_solar_system_two_body.npy",
         solar_system_two_body_state,
+    )
+    np.save(
+        PHYSICS_DATA_DIR / "full_state_solar_system_two_body.npy",
+        solar_system_two_body_full_state,
     )
     np.save(
         PHYSICS_DATA_DIR / "force_vector_solar_system_two_body.npy",
@@ -675,11 +728,14 @@ def main():
     exoplanet_distributions = build_exoplanet_distributions(
         exoplanet_df, max_sma=SMA_MAX
     )
+    if args.two_body_only:
+        exoplanet_distributions = build_two_body_distributions(max_sma=SMA_MAX)
     for n_traj, label in zip(
         (
             args.num_train_trajectories,
             args.num_val_trajectories,
             args.num_test_trajectories,
+            1_000,
             args.total_force_magnitudes,
             300, # for force val/test
             300,
@@ -688,6 +744,7 @@ def main():
             "train",
             "val",
             "test",
+            "traj",
             "two_body_train",
             "two_body_val",
             "two_body_test",

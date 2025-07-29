@@ -101,7 +101,7 @@ def top_k_closest_pairs_2d(states_test: np.ndarray,
 
 def main():
     # Do everything on train because we're doing the masking thing. 
-    train_state_file = "state_two_body_train.npy"
+    train_state_file = "full_state_two_body_train.npy"
     train_force_file = "force_magnitude_two_body_train.npy"
     train_force_file_masked = "force_magnitude_two_body_train_masked.npy"
     test_obs_file = "obs_two_body_train.npy"

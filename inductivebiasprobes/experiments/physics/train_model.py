@@ -25,6 +25,8 @@ def parse_physics_args():
     """Parse physics-specific command line arguments."""
     parser = argparse.ArgumentParser(description="Train a physics model")
     parser = add_common_args(parser)
+    parser.add_argument("--white_noise_dataset_idx_lower", type=int, default=None)
+    parser.add_argument("--white_noise_dataset_idx_upper", type=int, default=None)
     return parser.parse_args()
 
 
@@ -36,7 +38,6 @@ def load_config(args):
         file_config = yaml.load(f, Loader=yaml.FullLoader)
     file_config.update(config)
     return file_config
-
 
 
 def train_and_save_model(
@@ -128,7 +129,7 @@ def train_and_save_model(
 
     # Setup wandb config
     config["wandb_project"] = f"physics-pretrain-{config['predict_type']}"
-    config["wandb_entity"] = "keyonvafa"
+    config["wandb_entity"] = "petergchang"
     # Override only if run_name is not provided
     if config["wandb_run_name"] == "default":
         config["wandb_run_name"] = run_name or "gpt"
@@ -211,7 +212,11 @@ def main():
         )
 
     if config["predict_type"] == "white_noise":
-        for dataset_idx in range(config["num_white_noise_datasets"]):
+        if config["white_noise_dataset_idx_lower"] is None or config["white_noise_dataset_idx_upper"] is None:
+            idx_range = range(config["num_white_noise_datasets"])
+        else:
+            idx_range = range(config["white_noise_dataset_idx_lower"], config["white_noise_dataset_idx_upper"])
+        for dataset_idx in idx_range:
             logger.info(f"[Training on white noise dataset {dataset_idx}]")
 
             # Build checkpoint path
