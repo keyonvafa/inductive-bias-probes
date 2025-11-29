@@ -79,9 +79,6 @@ def main():
     )
 
     # Load states and raw trajectory data
-    # states = (
-    #     np.load(PHYSICS_EXT_DIR / "white_noise" / "states.npy").astype(np.int32)[:, :-1]
-    # ).ravel()
     states = np.load(ext_dir / "states.npy")
     state_dim = states.shape[-1]
     states = states.reshape(-1, state_dim)
@@ -155,6 +152,7 @@ def main():
     all_noise_dists = np.stack(all_noise_dists, axis=0)
     all_oracle_lin_dists = np.stack(all_oracle_lin_dists, axis=0)
     all_oracle_mlp_dists = np.stack(all_oracle_mlp_dists, axis=0)
+    extrap_dists = np.mean(all_extrap_dists, axis=0)
     noise_dists = np.mean(all_noise_dists, axis=0)
     oracle_lin_dists = np.mean(all_oracle_lin_dists, axis=0)
     oracle_mlp_dists = np.mean(all_oracle_mlp_dists, axis=0)
